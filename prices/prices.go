@@ -4,36 +4,43 @@ import (
 	"fmt"
 
 	"github.com/sgcooper78/go-calculator/conversion"
-	"github.com/sgcooper78/go-calculator/file_manager"
+	"github.com/sgcooper78/go-calculator/iomanager"
 )
 
 type TaxIncludedPriceJob struct {
-	IOManager         file_manager.FileManager `json:"-"`
-	TaxRate           float64                  `json:"tax_rate"`
-	InputPrices       []float64                `json:"input_prices"`
-	TaxIncludedPrices map[string]string        `json:"tax_included_prices"`
+	IOManager         iomanager.IOManager `json:"-"`
+	TaxRate           float64             `json:"tax_rate"`
+	InputPrices       []float64           `json:"input_prices"`
+	TaxIncludedPrices map[string]string   `json:"tax_included_prices"`
 }
 
-func (job *TaxIncludedPriceJob) loadData() {
+func (job *TaxIncludedPriceJob) loadData() error {
 	lines, err := job.IOManager.ReadLines()
 
 	if err != nil {
 		fmt.Println("Error reading file:", err)
-		return
+		return err
 	}
 
 	prices, err := conversion.StringsToFloats(lines)
 
 	if err != nil {
 		fmt.Println("Error converting strings to floats:", err)
-		return
+		return err
 	}
 
 	job.InputPrices = prices
+	return nil
 }
 
-func (job *TaxIncludedPriceJob) Process() {
-	job.loadData()
+func (job *TaxIncludedPriceJob) Process() error {
+	err := job.loadData()
+
+	if err != nil {
+		fmt.Println("Error loading data:", err)
+		return err
+	}
+
 	result := make(map[string]string)
 	for _, price := range job.InputPrices {
 		taxIncludedPrice := price * (1 + job.TaxRate)
@@ -44,16 +51,18 @@ func (job *TaxIncludedPriceJob) Process() {
 
 	fmt.Println(result)
 
-	err := job.IOManager.WriteResult(job)
+	err = job.IOManager.WriteResult(job)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
-		return
+		return err
 	}
+
+	return nil
 }
 
-func NewTaxIncludedPriceJob(fm file_manager.FileManager, taxRate float64) *TaxIncludedPriceJob {
+func NewTaxIncludedPriceJob(iom iomanager.IOManager, taxRate float64) *TaxIncludedPriceJob {
 	return &TaxIncludedPriceJob{
-		IOManager:   fm,
+		IOManager:   iom,
 		TaxRate:     taxRate,
 		InputPrices: []float64{10, 20, 30},
 	}
